@@ -20,7 +20,7 @@ ChaoticGoodAudioProcessorEditor::ChaoticGoodAudioProcessorEditor (
     valueTreeState(vts)
 {
 //    setSize(960, 550);
-    setSize(1260, 550);
+    setSize(1540, 550);
     addAndMakeVisible(mainComponent);
 }
 

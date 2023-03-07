@@ -135,6 +135,12 @@ public:
     void cycleRMWaveParamValue(juce::String parameterID);
     void cycleCombModParamValue();
 
+    // MIDI settings that need to be accessed directly by the GUI
+    bool cached_midi_noise = false;
+    bool cached_midi_ringA = false;
+    bool cached_midi_ringB = false;
+    bool cached_midi_comb = false;
+
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ChaoticGoodAudioProcessor)
@@ -163,6 +169,8 @@ private:
     // Ring Mod
     double cached_ring_mod_freq_A;
     double cached_ring_mod_freq_B;
+    double cached_ring_mod_freq_A_MIDI;
+    double cached_ring_mod_freq_B_MIDI;
     bool cached_ring_mod_low_A;
     bool cached_ring_mod_low_B;
     float cached_ring_mod_amt;
@@ -176,10 +184,6 @@ private:
     float apply_wave(float angle, int waveform);
 
     // MIDI
-    bool cached_midi_noise = false;
-    bool cached_midi_ringA = false;
-    bool cached_midi_ringB = false;
-    bool cached_midi_comb = false;
     int cached_midi_channel_noise;
     int cached_midi_channel_ringA;
     int cached_midi_channel_ringB;
@@ -192,6 +196,8 @@ private:
     int midi_note_number_ringA = 0;
     int midi_note_number_ringB = 0;
     int midi_note_number_comb = 0;
+    void recalculate_pitches_from_MIDI(juce::MidiMessage m);
+    float map_midi_frequency_offset(float value);
 
     // Filters
 
@@ -211,7 +217,9 @@ private:
     void updateHighFilter();
 
     Biquad* noise_filter;
+    Biquad* noise_filter_input;
     float cached_noise_filter_cutoff;
+    float cached_noise_filter_cutoff_MIDI;
     float cached_noise_filter_gain = -10.0f;
     int cached_noise_filter_type;
     float cached_noise_filter_resonance = 1.0f;
@@ -229,12 +237,12 @@ private:
     void advance_delay_line_write_head(int amount, int channel);
     void clearDelayLines();
     float apply_flange(float sample, int channel);
-    float get_lfo_value(float angle);
     float read_comb_delay_line(int channel);
 
     double cached_lfo_rate = 0.0;
     float cached_lfo_depth = 0.0f;
     int cached_centre_position = 0;
+    float cached_centre_position_MIDI = 0.0f;
     float cached_resonance = 0.0f;
     float cached_flanger_amount = 0.0f;
     float cached_flanger_AM = 0.0f;
@@ -247,8 +255,20 @@ private:
     float last_noise_sample = 0.0f;
     int cached_noise_resolution = 100;
     float apply_noise(float sample, int channel);
+    
+    // Jitter and Input Stage
+    float cached_jitter_depth = 0.0f;
+    float cached_jitter_duty_cycle = 0.0f;
+    float cached_jitter_frequency = 0.0f;
+    float cached_jitter_regularity = 0.0f;
+    float cached_jitter_slew = 0.0f;
+    float cached_filter_input = false;
+    float jitter_level = 1.0f;
+    float jitter_angle = 0.0f;
+    float jitter_offset = 0.0f;
+    float apply_jitter(float sample);
 
-    //==============================================
+;   //==============================================
     // Factory Presets
     juce::String* preset_names;
     juce::String* preset_filenames;

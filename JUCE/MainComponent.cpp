@@ -38,7 +38,7 @@ public:
         logoImage.setImage(img);
         addAndMakeVisible(logoImage);
 
-        mis = new juce::MemoryInputStream(BinaryData::background_v2_png, BinaryData::background_v2_pngSize, false);
+        mis = new juce::MemoryInputStream(BinaryData::background_v3_png, BinaryData::background_v3_pngSize, false);
         img = format.decodeImage(*mis);
         delete(mis);
         backgroundImage.setImage(img);
@@ -56,6 +56,8 @@ public:
 
         makeSlider(rmFreqASlider, rmFreqASliderLabel, "ring_mod_freq_A", rmFreqASliderAttachment, false, true, true);
         makeSlider(rmFreqBSlider, rmFreqBSliderLabel, "ring_mod_freq_B", rmFreqBSliderAttachment, false, true, true);
+        makeSlider(MIDI_rmFreqASlider, MIDI_rmFreqASliderLabel, "ring_mod_freq_A_MIDI", MIDI_rmFreqASliderAttachment, true, true, true);
+        makeSlider(MIDI_rmFreqBSlider, MIDI_rmFreqBSliderLabel, "ring_mod_freq_B_MIDI", MIDI_rmFreqBSliderAttachment, true, true, true);
 
         makeSlider(rmAmountSlider, rmAmountSliderLabel, "ring_mod_amt", rmAmountSliderAttachment, false, true, true);
         makeSlider(rmFMAmountSlider, rmFMAmountSliderLabel, "ring_mod_fm_amt", rmFMAmountSliderAttachment, false, true, true);
@@ -82,11 +84,12 @@ public:
         addAndMakeVisible(combModModeButton);
 
         makeSlider(rmModeSlider, rmModeSliderLabel, "ring_mod_mode", rmModeSliderAttachment, false, true, true);
-        makeSlider(flangerLFORateSlider, flangerLFORateSliderLabel, "flanger_lfo_rate", flangerLFORateSliderAttachment, false, true, true);
+//        makeSlider(flangerLFORateSlider, flangerLFORateSliderLabel, "noise_cutoff_feedback_amount", flangerLFORateSliderAttachment, false, true, true);
         makeSlider(flangerLFODepthSlider, flangerLFODepthSliderLabel, "flanger_lfo_depth", flangerLFODepthSliderAttachment, false, true, true);
 
         makeSlider(flangerAmountSlider, flangerAmountSliderLabel, "flanger_amount", flangerAmountSliderAttachment, false, true, true);
         makeSlider(flangerCentreSlider, flangerCentreSliderLabel, "flanger_centre_position", flangerCentreSliderAttachment, false, true, true);
+        makeSlider(MIDI_flangerCentreSlider, MIDI_flangerCentreSliderLabel, "flanger_centre_position_MIDI", MIDI_flangerCentreSliderAttachment, true, true, true);
         makeSlider(flangerResonanceSlider, flangerResonanceSliderLabel, "flanger_resonance", flangerResonanceSliderAttachment, false, true, true);
         makeSlider(flangerAMSlider, flangerAMSliderLabel, "flanger_AM", flangerAMSliderAttachment, false, true, true);
         
@@ -94,8 +97,15 @@ public:
         makeSlider(noiseDensityVarSlider, noiseDensityVarSliderLabel, "noise_density_variation", noiseDensityVarSliderAttachment, false, true, true);
         makeSlider(noiseLevelSlider, noiseLevelSliderLabel, "noise_level", noiseLevelSliderAttachment, false, true, true);
         makeSlider(noiseFilterCutoffSlider, noiseFilterCutoffSliderLabel, "noise_filter_cutoff", noiseFilterCutoffSliderAttachment, false, true, true);
+        makeSlider(MIDI_noiseFilterCutoffSlider, MIDI_noiseFilterCutoffSliderLabel, "noise_filter_cutoff_MIDI", MIDI_noiseFilterCutoffSliderAttachment, true, true, true);
         makeSlider(noiseFilterResonanceSlider, noiseFilterResonanceSliderLabel, "noise_filter_resonance", noiseFilterResonanceSliderAttachment, false, true, true);
         makeSlider(noiseFilterTypeSlider, noiseFilterTypeSliderLabel, "noise_filter_type", noiseFilterTypeSliderAttachment, false, true, true);
+
+        makeSlider(jitterDepthSlider, jitterDepthSliderLabel, "jitter_depth", jitterDepthSliderAttachment, false, true, true);
+        makeSlider(jitterFrequencySlider, jitterFrequencySliderLabel, "jitter_frequency", jitterFrequencySliderAttachment, false, true, true);
+        makeSlider(jitterDutyCycleSlider, jitterDutyCycleSliderLabel, "jitter_duty_cycle", jitterDutyCycleSliderAttachment, true, true, true);
+        makeSlider(jitterRegularitySlider, jitterRegularitySliderLabel, "jitter_regularity", jitterRegularitySliderAttachment, false, true, true);
+        makeSlider(jitterSlewSlider, jitterSlewSliderLabel, "jitter_slew", jitterSlewSliderAttachment, false, true, true);
 
         makeHeadingLabel(noiseSectionLabel, "Noise");
         makeHeadingLabel(ringModSectionLabel, "Ring Modulation");
@@ -108,13 +118,20 @@ public:
         lookAndFeel.setColour(juce::TextButton::ColourIds::buttonColourId, juce::Colours::darkgrey);
         lookAndFeel.setColour(juce::TextButton::ColourIds::buttonOnColourId, juce::Colours::lightcoral);
 
+        noiseMidiButton.onClick = [this] { resized(); };
         makeButton(noiseMidiButton, "Midi", "receive_midi_noise", noiseMidiButtonAttachment);
+        ringAMidiButton.onClick = [this] { resized(); };
         makeButton(ringAMidiButton, "Midi", "receive_midi_ringA", ringAMidiButtonAttachment);
+        ringBMidiButton.onClick = [this] { resized(); };
         makeButton(ringBMidiButton, "Midi", "receive_midi_ringB", ringBMidiButtonAttachment);
+        combMidiButton.onClick = [this] { resized(); };
         makeButton(combMidiButton, "Midi", "receive_midi_comb", combMidiButtonAttachment);
 
         makeButton(rmALFOButton, "LFO", "ring_mod_low_A", rmALFOButtonAttachment);
         makeButton(rmBLFOButton, "LFO", "ring_mod_low_B", rmBLFOButtonAttachment);
+
+        makeButton(jitterLFOButton, "LFO", "jitter_low", jitterLFOButtonAttachment);
+        makeButton(filterInputButton, "IN", "filter_input", filterInputButtonAttachment);
     }
 
     void makeButton(
@@ -216,10 +233,27 @@ public:
         int xpos = left_margin;
         int ypos = top_margin;
 
+        // Jitter
+        placeSlider(jitterDepthSlider, jitterDepthSliderLabel, xpos, ypos);
+        ypos += line_spacer;
+        placeSlider(jitterDutyCycleSlider, jitterDutyCycleSliderLabel, xpos, ypos);
+        ypos += line_spacer;
+        placeSlider(jitterSlewSlider, jitterSlewSliderLabel, xpos, ypos);
+        
+        ypos = top_margin;
+        xpos += knob_size + knob_spacer;
+        placeSlider(jitterFrequencySlider, jitterFrequencySliderLabel, xpos, ypos);
+        jitterLFOButton.setTopLeftPosition(xpos + 80, ypos);
+        jitterLFOButton.setSize(35, 25);
+        ypos += line_spacer;
+        placeSlider(jitterRegularitySlider, jitterRegularitySliderLabel, xpos, ypos);
+        ypos += line_spacer;
+
         // Noise
 
-//        noiseSectionLabel.setTopLeftPosition(xpos, 15);
-//        noiseSectionLabel.setSize(235, 55);
+        xpos = left_margin + col_spacer;
+        ypos = top_margin;
+
         noiseMidiButton.setTopLeftPosition(xpos + 200, 30);
         noiseMidiButton.setSize(50, 25);
 
@@ -231,28 +265,47 @@ public:
 
         ypos = top_margin;
         xpos += knob_size + knob_spacer;
-
-        placeSlider(noiseFilterCutoffSlider, noiseFilterCutoffSliderLabel, xpos, ypos);
+        if (audioProcessor->cached_midi_noise) {
+            noiseFilterCutoffSlider.setVisible(false);
+            MIDI_noiseFilterCutoffSlider.setVisible(true);
+            placeSlider(MIDI_noiseFilterCutoffSlider, MIDI_noiseFilterCutoffSliderLabel, xpos, ypos);
+        }
+        else {
+            MIDI_noiseFilterCutoffSlider.setVisible(false);
+            noiseFilterCutoffSlider.setVisible(true);
+            placeSlider(noiseFilterCutoffSlider, noiseFilterCutoffSliderLabel, xpos, ypos);
+        }
         ypos += line_spacer;
         placeSlider(noiseFilterResonanceSlider, noiseFilterResonanceSliderLabel, xpos, ypos);
         ypos += line_spacer;
         placeSlider(noiseFilterTypeSlider, noiseFilterTypeSliderLabel, xpos, ypos);
+        filterInputButton.setTopLeftPosition(xpos + 80, ypos);
+        filterInputButton.setSize(35, 25);
 
         // Ring Modulator
 
-        xpos = left_margin + col_spacer;
+        xpos = left_margin + col_spacer * 2;
         ypos = top_margin;
 
-//        ringModSectionLabel.setTopLeftPosition(xpos, 15);
-//        ringModSectionLabel.setSize(235, 55);
         ringAMidiButton.setTopLeftPosition(xpos + 200, 20);
         ringAMidiButton.setSize(50, 25);
         ringBMidiButton.setTopLeftPosition(xpos + 200, 45);
         ringBMidiButton.setSize(50, 25);
 
-        placeSlider(rmFreqASlider, rmFreqASliderLabel, xpos, ypos);
+        if (audioProcessor->cached_midi_ringA) {
+            rmFreqASlider.setVisible(false);
+            MIDI_rmFreqASlider.setVisible(true);
+            placeSlider(MIDI_rmFreqASlider, MIDI_rmFreqASliderLabel, xpos, ypos);
+        }
+        else {
+            MIDI_rmFreqASlider.setVisible(false);
+            rmFreqASlider.setVisible(true);
+            placeSlider(rmFreqASlider, rmFreqASliderLabel, xpos, ypos);
+        }
         rmALFOButton.setTopLeftPosition(xpos + 80, ypos);
         rmALFOButton.setSize(35, 25);
+        rmWaveA.setTopLeftPosition(xpos + 80, ypos + 40);
+        rmWaveA.toFront(false);
 
         ypos += line_spacer;
         placeSlider(rmAmountSlider, rmAmountSliderLabel, xpos, ypos);
@@ -261,15 +314,22 @@ public:
         
         ypos = top_margin;
         xpos += knob_size + knob_spacer;
-        placeSlider(rmFreqBSlider, rmFreqBSliderLabel, xpos, ypos);
+        if (audioProcessor->cached_midi_ringB) {
+            rmFreqBSlider.setVisible(false);
+            MIDI_rmFreqBSlider.setVisible(true);
+            placeSlider(MIDI_rmFreqBSlider, MIDI_rmFreqBSliderLabel, xpos, ypos);
+        }
+        else {
+            MIDI_rmFreqBSlider.setVisible(false);
+            rmFreqBSlider.setVisible(true);
+            placeSlider(rmFreqBSlider, rmFreqBSliderLabel, xpos, ypos);
+        }
         rmBLFOButton.setTopLeftPosition(xpos + 80, ypos);
         rmBLFOButton.setSize(40, 25);
+        rmWaveB.setTopLeftPosition(xpos + 80, ypos + 40);
+        rmWaveB.toFront(false);
 
         ypos += line_spacer;
-        rmWaveA.setTopLeftPosition(xpos, ypos);
-        rmWaveA.toFront(false);
-        rmWaveB.setTopLeftPosition(xpos, ypos + 30);
-        rmWaveB.toFront(false);
         //        placeSlider(rmWaveSlider, rmWaveSliderLabel, xpos, ypos);
         ypos += line_spacer;
         placeSlider(rmFMAmountSlider, rmFMAmountSliderLabel, xpos, ypos);
@@ -277,7 +337,7 @@ public:
 
         // Comb Filter
         
-        xpos = left_margin + col_spacer * 2;
+        xpos = left_margin + col_spacer * 3;
         ypos = top_margin;
 
 //        flangerSectionLabel.setTopLeftPosition(xpos, 15);
@@ -285,7 +345,16 @@ public:
         combMidiButton.setTopLeftPosition(xpos + 195, 30);
         combMidiButton.setSize(50, 25);
 
-        placeSlider(flangerCentreSlider, flangerCentreSliderLabel, xpos, ypos);
+        if (audioProcessor->cached_midi_comb) {
+            flangerCentreSlider.setVisible(false);
+            MIDI_flangerCentreSlider.setVisible(true);
+            placeSlider(MIDI_flangerCentreSlider, MIDI_flangerCentreSliderLabel, xpos, ypos);
+        }
+        else {
+            MIDI_flangerCentreSlider.setVisible(false);
+            flangerCentreSlider.setVisible(true);
+            placeSlider(flangerCentreSlider, flangerCentreSliderLabel, xpos, ypos);
+        }
         ypos += line_spacer;
         placeSlider(flangerAmountSlider, flangerAmountSliderLabel, xpos, ypos);
         ypos += line_spacer;
@@ -296,14 +365,13 @@ public:
         placeSlider(flangerResonanceSlider, flangerResonanceSliderLabel, xpos, ypos);
         ypos += line_spacer;
         placeSlider(flangerAMSlider, flangerAMSliderLabel, xpos, ypos);
-        ypos += line_spacer;
-//        placeSlider(flangerLFODepthSlider, flangerLFODepthSliderLabel, xpos, ypos);
-        combModModeButton.setTopLeftPosition(xpos, ypos);
+        combModModeButton.setTopLeftPosition(xpos + 80, ypos);
         combModModeButton.toFront(false);
+        ypos += line_spacer;
 
         // Amplifier
 
-        xpos = left_margin + col_spacer * 3;
+        xpos = left_margin + col_spacer * 4;
         ypos = top_margin;
         int amp_xpos = xpos;
   //      inputSectionLabel.setTopLeftPosition(xpos, 40);
@@ -405,6 +473,10 @@ private:
     juce::Label noiseFilterCutoffSliderLabel;
     std::unique_ptr<SliderAttachment> noiseFilterCutoffSliderAttachment;
 
+    juce::Slider MIDI_noiseFilterCutoffSlider;
+    juce::Label MIDI_noiseFilterCutoffSliderLabel;
+    std::unique_ptr<SliderAttachment> MIDI_noiseFilterCutoffSliderAttachment;
+
     juce::Slider noiseFilterResonanceSlider;
     juce::Label noiseFilterResonanceSliderLabel;
     std::unique_ptr<SliderAttachment> noiseFilterResonanceSliderAttachment;
@@ -445,9 +517,17 @@ private:
     juce::Label rmFreqASliderLabel;
     std::unique_ptr<SliderAttachment> rmFreqASliderAttachment;
 
+    juce::Slider MIDI_rmFreqASlider;
+    juce::Label MIDI_rmFreqASliderLabel;
+    std::unique_ptr<SliderAttachment> MIDI_rmFreqASliderAttachment;
+
     juce::Slider rmFreqBSlider;
     juce::Label rmFreqBSliderLabel;
     std::unique_ptr<SliderAttachment> rmFreqBSliderAttachment;
+
+    juce::Slider MIDI_rmFreqBSlider;
+    juce::Label MIDI_rmFreqBSliderLabel;
+    std::unique_ptr<SliderAttachment> MIDI_rmFreqBSliderAttachment;
 
     juce::Slider rmAmountSlider;
     juce::Label rmAmountSliderLabel;
@@ -474,6 +554,10 @@ private:
     juce::Label flangerCentreSliderLabel;
     std::unique_ptr<SliderAttachment> flangerCentreSliderAttachment;
 
+    juce::Slider MIDI_flangerCentreSlider;
+    juce::Label MIDI_flangerCentreSliderLabel;
+    std::unique_ptr<SliderAttachment> MIDI_flangerCentreSliderAttachment;
+
     juce::Slider flangerLFORateSlider;
     juce::Label flangerLFORateSliderLabel;
     std::unique_ptr<SliderAttachment> flangerLFORateSliderAttachment;
@@ -493,6 +577,32 @@ private:
     juce::Slider flangerAMSlider;
     juce::Label flangerAMSliderLabel;
     std::unique_ptr<SliderAttachment> flangerAMSliderAttachment;
+
+    juce::Slider jitterDepthSlider;
+    juce::Label jitterDepthSliderLabel;
+    std::unique_ptr<SliderAttachment> jitterDepthSliderAttachment;
+
+    juce::Slider jitterDutyCycleSlider;
+    juce::Label jitterDutyCycleSliderLabel;
+    std::unique_ptr<SliderAttachment> jitterDutyCycleSliderAttachment;
+
+    juce::Slider jitterFrequencySlider;
+    juce::Label jitterFrequencySliderLabel;
+    std::unique_ptr<SliderAttachment> jitterFrequencySliderAttachment;
+
+    juce::Slider jitterRegularitySlider;
+    juce::Label jitterRegularitySliderLabel;
+    std::unique_ptr<SliderAttachment> jitterRegularitySliderAttachment;
+
+    juce::Slider jitterSlewSlider;
+    juce::Label jitterSlewSliderLabel;
+    std::unique_ptr<SliderAttachment> jitterSlewSliderAttachment;
+
+    juce::TextButton filterInputButton;
+    std::unique_ptr<ButtonAttachment> filterInputButtonAttachment;
+
+    juce::TextButton jitterLFOButton;
+    std::unique_ptr<ButtonAttachment> jitterLFOButtonAttachment;
 
     juce::TextButton noiseMidiButton;
     std::unique_ptr<ButtonAttachment> noiseMidiButtonAttachment;
