@@ -11,6 +11,7 @@
 #include <JuceHeader.h>
 #include "Biquad.cpp"
 #include "Waves.h"
+#include "libMTSClient.h"
 
 #ifndef M_PI
 #define M_PI		3.14159265358
@@ -51,6 +52,13 @@ enum{
     RM_MODE_AM_2,
     RM_MODE_SYNTH_FM,
     RM_MODE_SYNTH_AM
+};
+
+enum {
+    COMB_MODE_SINGLE,
+    COMB_MODE_SERIES,
+    COMB_MODE_PARALLEL,
+    COMB_MODE_MULTIPLY
 };
 
 enum {
@@ -135,11 +143,15 @@ public:
     void cycleRMWaveParamValue(juce::String parameterID);
     void cycleCombModParamValue();
 
-    // MIDI settings that need to be accessed directly by the GUI
+    // Settings that need to be accessed directly by the GUI
+    // (The param tree doesn't seem to update when needed)
     bool cached_midi_noise = false;
     bool cached_midi_ringA = false;
     bool cached_midi_ringB = false;
-    bool cached_midi_comb = false;
+    bool cached_midi_comb_A = false;
+    bool cached_midi_comb_B = false;
+    int cached_ring_mod_mode = 0;
+    int cached_comb_mode = 0;
 
 private:
     //==============================================================================
@@ -179,7 +191,7 @@ private:
     double* ring_mod_angle_B;
     int cached_ring_mod_waveA = 0;
     int cached_ring_mod_waveB = 0;
-    int cached_ring_mod_mode;
+    float cached_ring_mod_xfade = 0.0f;
     float apply_ring_mod(float sample, int channel);
     float apply_wave(float angle, int waveform);
 
@@ -187,16 +199,26 @@ private:
     int cached_midi_channel_noise;
     int cached_midi_channel_ringA;
     int cached_midi_channel_ringB;
-    int cached_midi_channel_comb;
+    int cached_midi_channel_comb_A;
+    int cached_midi_channel_comb_B;
     bool midi_note_is_playing_noise = false;
     bool midi_note_is_playing_ringA = false;
     bool midi_note_is_playing_ringB = false;
-    bool midi_note_is_playing_comb = false;
+    bool midi_note_is_playing_comb_A = false;
+    bool midi_note_is_playing_comb_B = false;
     int midi_note_number_noise = 0;
     int midi_note_number_ringA = 0;
     int midi_note_number_ringB = 0;
-    int midi_note_number_comb = 0;
+    int midi_note_number_comb_A = 0;
+    int midi_note_number_comb_B = 0;
+    float midi_pitch_wheel_noise = 1.0f;
+    float midi_pitch_wheel_ringA = 1.0f;
+    float midi_pitch_wheel_ringB = 1.0f;
+    float midi_pitch_wheel_comb_A = 1.0f;
+    float midi_pitch_wheel_comb_B = 1.0f;
+    float midi_pitch_bend_range = 12;   // semitones
     void recalculate_pitches_from_MIDI(juce::MidiMessage m);
+    void recalculate_pitch_bends_from_MIDI(juce::MidiMessage m);
     float map_midi_frequency_offset(float value);
 
     // Filters
@@ -233,20 +255,24 @@ private:
     int* delay_line_write_idx = 0;
     double* lfo_angle;
     float centre_modifier = 0.0f;
-    void advance_delay_line_read_head(int channel);
-    void advance_delay_line_write_head(int amount, int channel);
+    void advance_delay_line_read_head(int channel, int comb_idx);
+    void advance_delay_line_write_head(int amount, int channel, int comb_idx);
     void clearDelayLines();
     float apply_flange(float sample, int channel);
-    float read_comb_delay_line(int channel);
+    float apply_comb(float sample, int channel, int comb_idx, float scale_resonance);
+    float read_comb_delay_line(int channel, int comb_idx);
 
     double cached_lfo_rate = 0.0;
-    float cached_lfo_depth = 0.0f;
-    int cached_centre_position = 0;
-    float cached_centre_position_MIDI = 0.0f;
+//    float cached_lfo_depth = 0.0f;
+    int cached_centre_position_A = 0;
+    int cached_centre_position_B = 0;
+    float cached_centre_position_MIDI_A = 0.0f;
+    float cached_centre_position_MIDI_B = 0.0f;
     float cached_resonance = 0.0f;
     float cached_flanger_amount = 0.0f;
     float cached_flanger_AM = 0.0f;
-    float cached_flanger_FM = 0.0f;
+    float cached_flanger_FM_A = 0.0f;
+    float cached_flanger_FM_B = 0.0f;
     int cached_comb_mod_mode = 0;
 
     // Noise
@@ -274,4 +300,7 @@ private:
     juce::String* preset_filenames;
     int current_programme;
     const int NUM_PROGRAMMES = 13;
+
+    // MTS-ESP
+    MTSClient* client = 0;
 };

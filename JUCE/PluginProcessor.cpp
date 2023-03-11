@@ -1,11 +1,25 @@
 /*
   ==============================================================================
 
+    We are COMPLETE for features, GUI elements and general GUI layout.
+
     TODO LIST
-        * Make MIDI pitch respond to pitch bends
-        * Add a second comb filter?
-        * Accept SCALA file or Oddsound MTS ?
-        * Make the GUI look pretty
+
+    * Make the GUI look pretty
+        *   Consider achieving this with just a background image and some tweaks to the colours
+        *       It's worth at least TRYING to use an image for a knob though -- what if it's easy??
+        *   Maybe make little diagrams for the ring mod showing what it's doing
+        *       This is fiddly but would look cute
+    * Add a popup for MIDI configuration
+        *   Should be able to set the MIDI channels and pitch bend range, maybe more options
+        *   Could even allow the user to customize the sequence of the effects.
+        *       Have the five sections in a column with up/down arrows on each
+        *       This would be fiddly but not very hard and might be really great.
+        *       Can we also then reflect the signal path in the GUI layout?
+        *       Maybe this is something for v2 as it seems like it would take quite a lot of work
+        *   Consider going back to the "MIDI note off" behaviours as well.
+        *       This would take a bit of coding but might be worth it.
+    * Presets
   ==============================================================================
 */
 
@@ -34,10 +48,10 @@ ChaoticGoodAudioProcessor::ChaoticGoodAudioProcessor()
         std::make_unique<juce::AudioParameterFloat>("amplifier_gain", "Gain", 0.0f, 1.0f, 0.15f),
         std::make_unique<juce::AudioParameterFloat>("power_positive", "Bias", 0.0f, 1.0f, 0.0f),
         std::make_unique<juce::AudioParameterFloat>("output_level", "Output", 0.0f, 1.0f, 0.35f),
-        std::make_unique<juce::AudioParameterFloat>("dry_blend", "Amount", 0.0f, 1.0f, 0.0f),
-        std::make_unique<juce::AudioParameterFloat>("low_cutoff", "Low Cut", 0.0f, 9.0f, 0.0f),
-        std::make_unique<juce::AudioParameterFloat>("mid_cutoff", "Mid Boost", 0.0f, 9.0f, 9.0f),
-        std::make_unique<juce::AudioParameterFloat>("high_cutoff", "High Cut", 0.0f, 9.0f, 9.0f),
+        std::make_unique<juce::AudioParameterFloat>("amp_blend", "Blend", 0.0f, 1.0f, 1.0f),
+        std::make_unique<juce::AudioParameterFloat>("low_cutoff", "Low Shelf", 0.0f, 9.0f, 0.0f),
+        std::make_unique<juce::AudioParameterFloat>("mid_cutoff", "Mid Hump", 0.0f, 9.0f, 9.0f),
+        std::make_unique<juce::AudioParameterFloat>("high_cutoff", "High Shelf", 0.0f, 9.0f, 9.0f),
         std::make_unique<juce::AudioParameterFloat>("ring_mod_freq_A", "Freq A", 0.1f, 16000.0f, 500.0f),
         std::make_unique<juce::AudioParameterFloat>("ring_mod_freq_B", "Freq B", 0.1f, 16000.0f, 500.0f),
         std::make_unique<juce::AudioParameterBool>("ring_mod_low_A", "LFO A", false),
@@ -46,8 +60,9 @@ ChaoticGoodAudioProcessor::ChaoticGoodAudioProcessor()
         std::make_unique<juce::AudioParameterBool>("receive_midi_ringB", "MIDI to Ring B", false),
         std::make_unique<juce::AudioParameterFloat>("ring_mod_freq_A_MIDI", "Freq A", -1.0f, 1.0f, 0.0f),
         std::make_unique<juce::AudioParameterFloat>("ring_mod_freq_B_MIDI", "Freq A", -1.0f, 1.0f, 0.0f),
-        std::make_unique<juce::AudioParameterFloat>("ring_mod_amt", "Amount", 0.0f, 1.0f, 0.0f),
-        std::make_unique<juce::AudioParameterFloat>("ring_mod_fm_amt", "FM/AM Amount", 0.0f, 1.0f, 0.0f),
+        std::make_unique<juce::AudioParameterFloat>("ring_mod_amt", "Blend", 0.0f, 1.0f, 0.0f),
+        std::make_unique<juce::AudioParameterFloat>("ring_mod_xfade", "XFade", -1.0f, 0.0f, 1.0f),
+        std::make_unique<juce::AudioParameterFloat>("ring_mod_fm_amt", "XMod Amount", 0.0f, 1.0f, 0.0f),
         std::make_unique<juce::AudioParameterChoice>("ring_mod_mode", "Mode", juce::StringArray {
                                                                                     "Single",
                                                                                     "Series",
@@ -64,12 +79,21 @@ ChaoticGoodAudioProcessor::ChaoticGoodAudioProcessor()
         std::make_unique<juce::AudioParameterInt>("ring_mod_waveB", "Ring Mod Wave B", 0, 3, 0),
         std::make_unique<juce::AudioParameterFloat>("flanger_lfo_rate", "LFO Rate", 0.0f, 1.0f, 0.5f),
         std::make_unique<juce::AudioParameterFloat>("flanger_lfo_depth", "LFO Depth", 0.0f, 1.0f, 0.0f),
-        std::make_unique<juce::AudioParameterFloat>("flanger_centre_position", "Frequency", 0.0f, 1000.0f, 500.0f),
-        std::make_unique<juce::AudioParameterFloat>("flanger_centre_position_MIDI", "Frequency", -1.0f, 1.0f, 0.0f),
-        std::make_unique<juce::AudioParameterFloat>("flanger_amount", "Amount", 0.0f, 1.0f, 0.0f),
+        std::make_unique<juce::AudioParameterFloat>("flanger_centre_position_A", "Freq A", 0.0f, 1000.0f, 500.0f),
+        std::make_unique<juce::AudioParameterFloat>("flanger_centre_position_MIDI_A", "Freq A", -1.0f, 1.0f, 0.0f),
+        std::make_unique<juce::AudioParameterFloat>("flanger_centre_position_B", "Freq B", 0.0f, 1000.0f, 500.0f),
+        std::make_unique<juce::AudioParameterFloat>("flanger_centre_position_MIDI_B", "Freq B", -1.0f, 1.0f, 0.0f),
+        std::make_unique<juce::AudioParameterFloat>("flanger_amount", "Blend", 0.0f, 1.0f, 0.0f),
         std::make_unique<juce::AudioParameterFloat>("flanger_resonance", "Resonance", 0.0f, 1.0f, 0.5f),
-        std::make_unique<juce::AudioParameterFloat>("flanger_AM", "AM", 0.0f, 1.0f, 0.0f),
-        std::make_unique<juce::AudioParameterFloat>("noise_level", "Amount", 0.0f, 1.0f, 0.0f),
+        std::make_unique<juce::AudioParameterFloat>("flanger_AM", "XMod Amount", 0.0f, 1.0f, 0.0f),
+        std::make_unique<juce::AudioParameterChoice>("comb_mode", "Mode", juce::StringArray {
+                                                                                    "Single",
+                                                                                    "Series",
+                                                                                    "Parallel",
+                                                                                    "Multiply"
+                                                                                }, 0
+            ),
+        std::make_unique<juce::AudioParameterFloat>("noise_level", "Blend", 0.0f, 1.0f, 0.0f),
         std::make_unique<juce::AudioParameterFloat>("noise_density", "Density", 0.0f, 1.0f, 1.0f),
         std::make_unique<juce::AudioParameterFloat>("noise_density_variation", "Variation", 0.0f, 1.0f, 1.0f),
         std::make_unique<juce::AudioParameterFloat>("noise_filter_cutoff", "Cutoff", 0.0f, 9.0f, 9.0f),
@@ -85,12 +109,14 @@ ChaoticGoodAudioProcessor::ChaoticGoodAudioProcessor()
                                                                                     "H Shlf"
                                                                                 }, 0),
         std::make_unique<juce::AudioParameterBool>("receive_midi_noise", "MIDI to Noise", false),
-        std::make_unique<juce::AudioParameterBool>("receive_midi_comb", "MIDI to Comb", false),
+        std::make_unique<juce::AudioParameterBool>("receive_midi_comb_A", "MIDI to Comb", false),
+        std::make_unique<juce::AudioParameterBool>("receive_midi_comb_B", "MIDI to Comb", false),
         std::make_unique<juce::AudioParameterInt>("midi_noise_channel", "MIDI Noise Channel", 0, 16, 0),
         std::make_unique<juce::AudioParameterInt>("midi_ringA_channel", "MIDI Ring A Channel", 0, 16, 0),
         std::make_unique<juce::AudioParameterInt>("midi_ringB_channel", "MIDI Ring B Channel", 0, 16, 0),
-        std::make_unique<juce::AudioParameterInt>("midi_comb_channel", "MIDI Comb Channel", 0, 16, 0),
-        std::make_unique<juce::AudioParameterFloat>("jitter_depth", "Amount", 0.0, 1.0, 0.0),
+        std::make_unique<juce::AudioParameterInt>("midi_comb_channel_A", "MIDI Comb A Channel", 0, 16, 0),
+        std::make_unique<juce::AudioParameterInt>("midi_comb_channel_B", "MIDI Comb B Channel", 0, 16, 0),
+        std::make_unique<juce::AudioParameterFloat>("jitter_depth", "Blend", 0.0, 1.0, 0.0),
         std::make_unique<juce::AudioParameterFloat>("jitter_frequency", "Frequency", 0.0, 1.0, 0.0),
         std::make_unique<juce::AudioParameterFloat>("jitter_regularity", "Regularity", 0.0, 1.0, 0.0),
         std::make_unique<juce::AudioParameterFloat>("jitter_duty_cycle", "Duty Cycle", -1.0, 1.0, 0.0),
@@ -102,7 +128,7 @@ ChaoticGoodAudioProcessor::ChaoticGoodAudioProcessor()
     tree.addParameterListener("amplifier_gain", this);
     tree.addParameterListener("power_positive", this);
     tree.addParameterListener("output_level", this);
-    tree.addParameterListener("dry_blend", this);
+    tree.addParameterListener("amp_blend", this);
     tree.addParameterListener("low_cutoff", this);
     tree.addParameterListener("mid_cutoff", this);
     tree.addParameterListener("high_cutoff", this);
@@ -112,13 +138,16 @@ ChaoticGoodAudioProcessor::ChaoticGoodAudioProcessor()
     tree.addParameterListener("ring_mod_low_B", this);
     tree.addParameterListener("ring_mod_amt", this);
     tree.addParameterListener("ring_mod_fm_amt", this);
+    tree.addParameterListener("ring_mod_xfade", this);
     tree.addParameterListener("ring_mod_mode", this);
     tree.addParameterListener("flanger_lfo_rate", this);
     tree.addParameterListener("flanger_lfo_depth", this);
-    tree.addParameterListener("flanger_centre_position", this);
+    tree.addParameterListener("flanger_centre_position_A", this);
+    tree.addParameterListener("flanger_centre_position_B", this);
     tree.addParameterListener("flanger_amount", this);
     tree.addParameterListener("flanger_resonance", this);
     tree.addParameterListener("flanger_AM", this);
+    tree.addParameterListener("comb_mode", this);
     tree.addParameterListener("noise_density", this);
     tree.addParameterListener("noise_density_variation", this);
     tree.addParameterListener("noise_level", this);
@@ -128,11 +157,13 @@ ChaoticGoodAudioProcessor::ChaoticGoodAudioProcessor()
     tree.addParameterListener("receive_midi_noise", this);
     tree.addParameterListener("receive_midi_ringA", this);
     tree.addParameterListener("receive_midi_ringB", this);
-    tree.addParameterListener("receive_midi_comb", this);
+    tree.addParameterListener("receive_midi_comb_A", this);
+    tree.addParameterListener("receive_midi_comb_B", this);
     tree.addParameterListener("midi_noise_channel", this);
     tree.addParameterListener("midi_ringA_channel", this);
     tree.addParameterListener("midi_ringB_channel", this);
-    tree.addParameterListener("midi_comb_channel", this);
+    tree.addParameterListener("midi_comb_channel_A", this);
+    tree.addParameterListener("midi_comb_channel_B", this);
     tree.addParameterListener("jitter_depth", this);
     tree.addParameterListener("jitter_frequency", this);
     tree.addParameterListener("jitter_regularity", this);
@@ -141,7 +172,8 @@ ChaoticGoodAudioProcessor::ChaoticGoodAudioProcessor()
     tree.addParameterListener("filter_input", this);
     tree.addParameterListener("jitter_low", this);
     tree.addParameterListener("noise_filter_cutoff_MIDI", this);
-    tree.addParameterListener("flanger_centre_position_MIDI", this);
+    tree.addParameterListener("flanger_centre_position_MIDI_A", this);
+    tree.addParameterListener("flanger_centre_position_MIDI_B", this);
     tree.addParameterListener("ring_mod_freq_A_MIDI", this);
     tree.addParameterListener("ring_mod_freq_B_MIDI", this);
 
@@ -179,6 +211,7 @@ ChaoticGoodAudioProcessor::ChaoticGoodAudioProcessor()
 
 ChaoticGoodAudioProcessor::~ChaoticGoodAudioProcessor()
 {
+    MTS_DeregisterClient(client);
 }
 
 //==============================================================================
@@ -262,13 +295,18 @@ void ChaoticGoodAudioProcessor::changeProgramName (int index, const juce::String
 //==============================================================================
 void ChaoticGoodAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    if (!client) {
+        client = MTS_RegisterClient();
+    }
+
     host_sample_rate = sampleRate;
     num_channels = getNumInputChannels();
 
     cached_midi_channel_noise = 0;
     cached_midi_channel_ringA = 0;
     cached_midi_channel_ringB = 0;
-    cached_midi_channel_comb = 0;
+    cached_midi_channel_comb_A = 0;
+    cached_midi_channel_comb_B = 0;
 
     ring_mod_angle_A = new double[num_channels];
     ring_mod_angle_B = new double[num_channels];
@@ -289,11 +327,11 @@ void ChaoticGoodAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     updateNoiseFilter();
 
     delay_line_length = sampleRate;
-    delay_line = new float* [num_channels];
-    delay_line_write_idx = new int[num_channels];
-    delay_line_read_idx = new int[num_channels];
-    delay_line_read_excess = new float[num_channels];
-    lfo_angle = new double[num_channels];
+    delay_line = new float* [num_channels * 2];
+    delay_line_write_idx = new int[num_channels * 2];
+    delay_line_read_idx = new int[num_channels * 2];
+    delay_line_read_excess = new float[num_channels * 2];
+    lfo_angle = new double[num_channels * 2];
 
     clearDelayLines();
 
@@ -301,7 +339,7 @@ void ChaoticGoodAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
 }
 
 void ChaoticGoodAudioProcessor::clearDelayLines() {
-    for (int j = 0; j < num_channels; ++j) {
+    for (int j = 0; j < num_channels * 2; ++j) {
         delay_line_write_idx[j] = 0;
         delay_line_read_idx[j] = 0;
         delay_line_read_excess[j] = 0.0f;
@@ -313,12 +351,23 @@ void ChaoticGoodAudioProcessor::clearDelayLines() {
     }
 }
 
-void ChaoticGoodAudioProcessor::advance_delay_line_read_head(int channel) {
-    int centre = cached_centre_position;
-    if (cached_midi_comb) {
-        centre *= cached_centre_position_MIDI;
+void ChaoticGoodAudioProcessor::advance_delay_line_read_head(int channel, int comb_idx) {
+    channel += num_channels * comb_idx;
+    int centre = 0;
+    if (comb_idx == 0) {
+        centre = cached_centre_position_A;
+        if (cached_midi_comb_A) {
+            centre *= cached_centre_position_MIDI_A * midi_pitch_wheel_comb_A;
+        }
+    }
+    else {
+        centre = cached_centre_position_B;
+        if (cached_midi_comb_B) {
+            centre *= cached_centre_position_MIDI_B * midi_pitch_wheel_comb_B;
+        }
     }
     delay_line_read_idx[channel] = delay_line_write_idx[channel] - centre;
+
     float mod_value = 0.0f;
     if (cached_comb_mod_mode == COMB_MOD_MODE_FM_A) {
         mod_value = apply_wave(ring_mod_angle_A[channel], cached_ring_mod_waveA);
@@ -330,8 +379,13 @@ void ChaoticGoodAudioProcessor::advance_delay_line_read_head(int channel) {
     else {
         mod_value = 1.0f;
     }
-
-    float newval = mod_value * cached_flanger_FM;
+    float newval = mod_value;
+    if (comb_idx == 0) {
+        newval *= cached_flanger_FM_A;
+    }
+    else {
+        newval *= cached_flanger_FM_B;
+    }
     delay_line_read_idx[channel] += trunc(newval);
     delay_line_read_excess[channel] = newval - floor(newval);
     while (delay_line_read_idx[channel] >= delay_line_length) {
@@ -342,7 +396,8 @@ void ChaoticGoodAudioProcessor::advance_delay_line_read_head(int channel) {
     }
 }
 
-void ChaoticGoodAudioProcessor::advance_delay_line_write_head(int amount, int channel) {
+void ChaoticGoodAudioProcessor::advance_delay_line_write_head(int amount, int channel, int comb_idx) {
+    channel += num_channels * comb_idx;
     delay_line_write_idx[channel] += amount;
     if (delay_line_write_idx[channel] >= delay_line_length) {
         delay_line_write_idx[channel] -= delay_line_length;
@@ -420,11 +475,13 @@ void ChaoticGoodAudioProcessor::parameterChanged(const juce::String& parameterID
     cached_midi_noise = *tree.getRawParameterValue("receive_midi_noise");
     cached_midi_ringA = *tree.getRawParameterValue("receive_midi_ringA");
     cached_midi_ringB = *tree.getRawParameterValue("receive_midi_ringB");
-    cached_midi_comb = *tree.getRawParameterValue("receive_midi_comb");
+    cached_midi_comb_A = *tree.getRawParameterValue("receive_midi_comb_A");
+    cached_midi_comb_B = *tree.getRawParameterValue("receive_midi_comb_B");
     cached_midi_channel_noise = *tree.getRawParameterValue("midi_noise_channel");
     cached_midi_channel_ringA = *tree.getRawParameterValue("midi_ringA_channel");
     cached_midi_channel_ringB = *tree.getRawParameterValue("midi_ringB_channel");
-    cached_midi_channel_comb = *tree.getRawParameterValue("midi_comb_channel");
+    cached_midi_channel_comb_A = *tree.getRawParameterValue("midi_comb_channel_A");
+    cached_midi_channel_comb_B = *tree.getRawParameterValue("midi_comb_channel_B");
 
     // EQ
     cached_low_filter_cutoff = 16 * pow(2, *tree.getRawParameterValue("low_cutoff"));
@@ -461,6 +518,7 @@ void ChaoticGoodAudioProcessor::parameterChanged(const juce::String& parameterID
     // Ring mod
     cached_ring_mod_mode = (int) * tree.getRawParameterValue("ring_mod_mode");
     cached_ring_mod_fm_amt = *tree.getRawParameterValue("ring_mod_fm_amt");
+    cached_ring_mod_xfade = (* tree.getRawParameterValue("ring_mod_xfade") + 1) / 2;
     if (cached_midi_ringA) {
         cached_ring_mod_freq_A_MIDI = map_midi_frequency_offset(*tree.getRawParameterValue("ring_mod_freq_A_MIDI"));
     }
@@ -487,21 +545,38 @@ void ChaoticGoodAudioProcessor::parameterChanged(const juce::String& parameterID
     cached_ring_mod_amt = *tree.getRawParameterValue("ring_mod_amt");
 
     // Flanger
+    if (parameterID == "comb_mode") {
+        clearDelayLines();
+    }
     cached_flanger_amount = *tree.getRawParameterValue("flanger_amount");
-    
-    if (cached_midi_comb) {
-        cached_centre_position_MIDI = map_midi_frequency_offset(-1 * *tree.getRawParameterValue("flanger_centre_position_MIDI"));
+    cached_comb_mode = (int) * tree.getRawParameterValue("comb_mode");
+
+    if (cached_midi_comb_A) {
+        cached_centre_position_MIDI_A = map_midi_frequency_offset(-1 * *tree.getRawParameterValue("flanger_centre_position_MIDI_A"));
     }
     else {
-        float centre_position = tree.getParameterRange("flanger_centre_position").end;
-        centre_position -= *tree.getRawParameterValue("flanger_centre_position");
+        float centre_position = tree.getParameterRange("flanger_centre_position_A").end;
+        centre_position -= *tree.getRawParameterValue("flanger_centre_position_A");
         centre_position *= centre_modifier;
         if (centre_position < 0) {
-            centre_position += 1;
+            centre_position = 0;
         }
-        cached_centre_position = floor(centre_position);
+        cached_centre_position_A = floor(centre_position);
     }
 
+    if (cached_midi_comb_B) {
+        cached_centre_position_MIDI_B = map_midi_frequency_offset(-1 * *tree.getRawParameterValue("flanger_centre_position_MIDI_B"));
+    }
+    else {
+        float centre_position = tree.getParameterRange("flanger_centre_position_B").end;
+        centre_position -= *tree.getRawParameterValue("flanger_centre_position_B");
+        centre_position *= centre_modifier;
+        if (centre_position < 0) {
+            centre_position = 0;
+        }
+        cached_centre_position_B = floor(centre_position);
+    }
+    /*
     cached_lfo_depth = *tree.getRawParameterValue("flanger_lfo_depth");
     cached_lfo_depth *= fmin(cached_centre_position, delay_line_length - cached_centre_position);
     cached_lfo_depth /= 10;
@@ -509,14 +584,16 @@ void ChaoticGoodAudioProcessor::parameterChanged(const juce::String& parameterID
     cached_lfo_rate = *tree.getRawParameterValue("flanger_lfo_rate") * M_TWO_PI;
     cached_lfo_rate *= 2;
     cached_lfo_rate /= host_sample_rate;
-
+    */
     cached_resonance = *tree.getRawParameterValue("flanger_resonance");
     cached_resonance /= 2.0f;
     cached_resonance += 1.5f;
 
     cached_flanger_AM = *tree.getRawParameterValue("flanger_AM");
-    cached_flanger_FM = cached_flanger_AM * fmin(cached_centre_position, delay_line_length - cached_centre_position);
-    cached_flanger_FM /= 10;
+    cached_flanger_FM_A = cached_flanger_AM * fmin(cached_centre_position_A, delay_line_length - cached_centre_position_A);
+    cached_flanger_FM_A /= 10;
+    cached_flanger_FM_B = cached_flanger_AM * fmin(cached_centre_position_B, delay_line_length - cached_centre_position_B);
+    cached_flanger_FM_B /= 10;
 
     // Noise
     cached_noise_level = *tree.getRawParameterValue("noise_level");
@@ -537,7 +614,7 @@ void ChaoticGoodAudioProcessor::parameterChanged(const juce::String& parameterID
     cached_output_level *= 2.67f;
     cached_output_level = pow(cached_output_level, 3);
     cached_output_level *= MAX_OUTPUT;
-    cached_dry_blend = *tree.getRawParameterValue("dry_blend");
+    cached_dry_blend = 1 - *tree.getRawParameterValue("amp_blend");
 }
 
 void ChaoticGoodAudioProcessor::updateLowFilter() {
@@ -568,7 +645,7 @@ void ChaoticGoodAudioProcessor::updateHighFilter() {
     for (int i = 0; i < num_channels; ++i) {
         high_filter[i].recalculate(
             host_sample_rate,
-            cached_high_filter_cutoff * cached_noise_filter_cutoff_MIDI,
+            cached_high_filter_cutoff,
             1.0f,
             cached_high_filter_gain,
             HSH
@@ -580,6 +657,7 @@ void ChaoticGoodAudioProcessor::updateNoiseFilter() {
     float cutoff = cached_noise_filter_cutoff;
     if (cached_midi_noise) {
         cutoff *= cached_noise_filter_cutoff_MIDI;
+        cutoff *= midi_pitch_wheel_noise;
     }
     for (int i = 0; i < num_channels; ++i) {
         noise_filter[i].recalculate(
@@ -727,7 +805,7 @@ float ChaoticGoodAudioProcessor::apply_ring_mod(float sample, int channel) {
     }
     if (cached_ring_mod_mode == RM_MODE_PARALLEL) {
         sample = sample * (1 - cached_ring_mod_amt)
-            + (sample * rm_A + sample * rm_B) * cached_ring_mod_amt / 2;
+            + (sample * rm_A * cached_ring_mod_xfade + sample * rm_B * (1 - cached_ring_mod_xfade));
     }
     else if (cached_ring_mod_mode == RM_MODE_SYNTH_FM || cached_ring_mod_mode == RM_MODE_SYNTH_AM) {
         sample = rm_A;
@@ -816,13 +894,13 @@ float ChaoticGoodAudioProcessor::apply_clip(float sample, int channel) {
 
 float ChaoticGoodAudioProcessor::process(float sample, int channel) {
 
+    sample = apply_ring_mod(sample, channel);
+    float flange_tmp = apply_flange(sample, channel);
+    sample = flange_tmp * cached_flanger_amount + sample * (1 - cached_flanger_amount);
+    
     float dry = sample;
 
-    sample = apply_ring_mod(sample, channel);
-
     sample = mid_filter[channel].apply(sample);
-
-    sample = apply_flange(sample, channel) * cached_flanger_amount + sample * (1 - cached_flanger_amount);
 
     sample = apply_clip(sample, channel);
 
@@ -837,7 +915,7 @@ float ChaoticGoodAudioProcessor::process(float sample, int channel) {
     sample *= cached_output_level;
 
     // Clamp to valid range
-    //sample = clamp(sample, -1, 1);
+    // NB if amplifier is blended out, it can still be necessary to clamp this later (see processBlock)
     sample = tanh(sample);
 
     sample = dry * cached_dry_blend + sample * (1 - cached_dry_blend);
@@ -845,7 +923,8 @@ float ChaoticGoodAudioProcessor::process(float sample, int channel) {
     return sample;
 }
 
-float ChaoticGoodAudioProcessor::read_comb_delay_line(int channel) {
+float ChaoticGoodAudioProcessor::read_comb_delay_line(int channel, int comb_idx) {
+    channel += num_channels * comb_idx;
     int i = delay_line_read_idx[channel];
     int i_next = i + 1;
     if (i_next >= delay_line_length) {
@@ -856,39 +935,125 @@ float ChaoticGoodAudioProcessor::read_comb_delay_line(int channel) {
     float result = low_result + (high_result - low_result) * delay_line_read_excess[channel];
     return result;
 }
-
-float ChaoticGoodAudioProcessor::apply_flange(float sample, int channel) {
-    lfo_angle[channel] += cached_lfo_rate;
-    if (lfo_angle[channel] > M_TWO_PI) {
-        lfo_angle[channel] -= M_TWO_PI;
+float ChaoticGoodAudioProcessor::apply_comb(float sample, int channel, int comb_idx, float scale_resonance = 1.0f) {
+    int channel_idx = channel + 2 * comb_idx;
+    lfo_angle[channel_idx] += cached_lfo_rate;
+    if (lfo_angle[channel_idx] > M_TWO_PI) {
+        lfo_angle[channel_idx] -= M_TWO_PI;
     }
-    advance_delay_line_write_head(1, channel);
-    advance_delay_line_read_head(channel);
-    float result = read_comb_delay_line(channel);
+    advance_delay_line_write_head(1, channel, comb_idx);
+    advance_delay_line_read_head(channel, comb_idx);
+    float result = read_comb_delay_line(channel, comb_idx);
 
-    result = (result + sample)/2;
-    delay_line[channel][delay_line_write_idx[channel]] = cached_resonance * result;
+    result = clamp((result + sample) / 2, -1, 1);
+
+    delay_line[channel_idx][delay_line_write_idx[channel_idx]] = cached_resonance * result * scale_resonance;
+
     if (cached_comb_mod_mode == COMB_MOD_MODE_AM_A) {
-        float tmp = delay_line[channel][delay_line_write_idx[channel]] 
-            * apply_wave(ring_mod_angle_A[channel], cached_ring_mod_waveA) * 1.1f;
-        delay_line[channel][delay_line_write_idx[channel]] = 
-            tmp * cached_flanger_AM 
-            + delay_line[channel][delay_line_write_idx[channel]] * (1 - cached_flanger_AM);
-    } else if (cached_comb_mod_mode == COMB_MOD_MODE_AM_B) {
-        float tmp = delay_line[channel][delay_line_write_idx[channel]]
-            * apply_wave(ring_mod_angle_B[channel], cached_ring_mod_waveB) * 1.1f;
-        delay_line[channel][delay_line_write_idx[channel]] =
+        float tmp = delay_line[channel_idx][delay_line_write_idx[channel_idx]]
+            * apply_wave(ring_mod_angle_A[channel_idx], cached_ring_mod_waveA) * 1.1f;
+        delay_line[channel_idx][delay_line_write_idx[channel_idx]] =
             tmp * cached_flanger_AM
-            + delay_line[channel][delay_line_write_idx[channel]] * (1 - cached_flanger_AM);
+            + delay_line[channel_idx][delay_line_write_idx[channel_idx]] * (1 - cached_flanger_AM);
+    }
+    else if (cached_comb_mod_mode == COMB_MOD_MODE_AM_B) {
+        float tmp = delay_line[channel_idx][delay_line_write_idx[channel_idx]]
+            * apply_wave(ring_mod_angle_B[channel_idx], cached_ring_mod_waveB) * 1.1f;
+        delay_line[channel_idx][delay_line_write_idx[channel_idx]] =
+            tmp * cached_flanger_AM
+            + delay_line[channel_idx][delay_line_write_idx[channel_idx]] * (1 - cached_flanger_AM);
     }
 
     return result;
 }
 
+float ChaoticGoodAudioProcessor::apply_flange(float sample, int channel) {
+    switch (cached_comb_mode) {
+    case COMB_MODE_SINGLE:
+        sample = apply_comb(sample, channel, 0);
+        break;
+    case COMB_MODE_SERIES:
+        sample = apply_comb(sample, channel, 0, 0.9);
+        sample = apply_comb(sample, channel, 1);
+        break;
+    case COMB_MODE_PARALLEL:
+        sample = apply_comb(sample, channel, 0)/2 + apply_comb(sample, channel, 1)/2;
+        break;
+    case COMB_MODE_MULTIPLY:
+        sample = apply_comb(sample, channel, 0) * apply_comb(sample, channel, 1);
+        break;
+    }
+    return sample;
+}
+void ChaoticGoodAudioProcessor::recalculate_pitch_bends_from_MIDI(juce::MidiMessage m) {
+    int midi_pitch_wheel_value = m.getPitchWheelValue();
+    int channel = m.getChannel();
+    float bend_amount = 0.0f;
+    if (midi_pitch_wheel_value < 8192) {
+        bend_amount = -1 * (8192.0f - (float)midi_pitch_wheel_value) / 8192.0f;
+    }
+    else if (midi_pitch_wheel_value > 8192) {
+        bend_amount = ((float)midi_pitch_wheel_value - 8192.0f) / 8192.0f;
+    }
+    if (cached_midi_noise) {
+        if (cached_midi_channel_noise == 0 || channel == cached_midi_channel_noise) {
+            midi_pitch_wheel_noise = pow(2, bend_amount) * midi_pitch_bend_range / 12;
+            updateNoiseFilter();
+        }
+    }
+    if (cached_midi_ringA) {
+        if (cached_midi_channel_ringA == 0 || channel == cached_midi_channel_ringA) {
+            midi_pitch_wheel_ringA = 1 + bend_amount * midi_pitch_bend_range / 12;
+        }
+    }
+    if (cached_midi_ringB) {
+        if (cached_midi_channel_ringB == 0 || channel == cached_midi_channel_ringB) {
+            midi_pitch_wheel_ringB = 1 + bend_amount * midi_pitch_bend_range / 12;
+        }
+    }
+    if (cached_midi_comb_A) {
+        if (cached_midi_channel_comb_A == 0 || channel == cached_midi_channel_comb_A) {
+            if (midi_pitch_wheel_value < 8192) {
+                bend_amount /= 1.5;
+                midi_pitch_wheel_comb_A = 1 + bend_amount * midi_pitch_bend_range / 12;
+                midi_pitch_wheel_comb_A = 1 / midi_pitch_wheel_comb_A;
+            } else if(midi_pitch_wheel_value > 8192){
+                midi_pitch_wheel_comb_A = 1 + bend_amount * midi_pitch_bend_range / 12;
+                midi_pitch_wheel_comb_A = 1 / midi_pitch_wheel_comb_A;
+           }
+            else {
+                midi_pitch_wheel_comb_A = 1;
+            }
+        }
+    }
+    if (cached_midi_comb_B) {
+        if (cached_midi_channel_comb_B == 0 || channel == cached_midi_channel_comb_B) {
+            if (midi_pitch_wheel_value < 8192) {
+                bend_amount /= 1.5;
+                midi_pitch_wheel_comb_B = 1 + bend_amount * midi_pitch_bend_range / 12;
+                midi_pitch_wheel_comb_B = 1 / midi_pitch_wheel_comb_B;
+            }
+            else if (midi_pitch_wheel_value > 8192) {
+                midi_pitch_wheel_comb_B = 1 + bend_amount * midi_pitch_bend_range / 12;
+                midi_pitch_wheel_comb_B = 1 / midi_pitch_wheel_comb_B;
+            }
+            else {
+                midi_pitch_wheel_comb_B = 1;
+            }
+        }
+    }
+
+}
 void ChaoticGoodAudioProcessor::recalculate_pitches_from_MIDI(juce::MidiMessage m) {
     int MIDI_note_number = m.getNoteNumber();
     int channel = m.getChannel();
-    float f = m.getMidiNoteInHertz(MIDI_note_number);
+    float f = 0.0f;
+    if (client) {
+        f = MTS_NoteToFrequency(client, MIDI_note_number, channel);
+    }
+    else {
+        f = m.getMidiNoteInHertz(MIDI_note_number);
+    }
     if (cached_midi_noise) {
         if (cached_midi_channel_noise == 0 || channel == cached_midi_channel_noise) {
             midi_note_is_playing_noise = true;
@@ -911,12 +1076,21 @@ void ChaoticGoodAudioProcessor::recalculate_pitches_from_MIDI(juce::MidiMessage 
             cached_ring_mod_freq_B = f * cached_ring_mod_freq_B_MIDI;
         }
     }
-    if (cached_midi_comb) {
-        if (cached_midi_channel_comb == 0 || channel == cached_midi_channel_comb) {
-            midi_note_is_playing_comb = true;
-            midi_note_number_comb = MIDI_note_number;
+    if (cached_midi_comb_A) {
+        if (cached_midi_channel_comb_A == 0 || channel == cached_midi_channel_comb_A) {
+            midi_note_is_playing_comb_A = true;
+            midi_note_number_comb_A = MIDI_note_number;
             if (f > 0) {
-                cached_centre_position = host_sample_rate / f;
+                cached_centre_position_A = host_sample_rate / f;
+            }
+        }
+    }
+    if (cached_midi_comb_B) {
+        if (cached_midi_channel_comb_B == 0 || channel == cached_midi_channel_comb_B) {
+            midi_note_is_playing_comb_B = true;
+            midi_note_number_comb_B = MIDI_note_number;
+            if (f > 0) {
+                cached_centre_position_B = host_sample_rate / f;
             }
         }
     }
@@ -931,7 +1105,7 @@ void ChaoticGoodAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
         // Increment these for both channels first to keep them in sync
         for (auto i = 0; i < 2; ++i) {
             if (cached_midi_ringA) {
-                ring_mod_angle_A[i] += (cached_ring_mod_freq_A * cached_ring_mod_freq_A_MIDI) / host_sample_rate;
+                ring_mod_angle_A[i] += (cached_ring_mod_freq_A * cached_ring_mod_freq_A_MIDI * midi_pitch_wheel_ringA) / host_sample_rate;
             }
             else {
                 ring_mod_angle_A[i] += cached_ring_mod_freq_A / host_sample_rate;
@@ -940,7 +1114,7 @@ void ChaoticGoodAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
                 ring_mod_angle_A[i] -= M_TWO_PI;
             }
             if (cached_midi_ringB) {
-                ring_mod_angle_B[i] += (cached_ring_mod_freq_B * cached_ring_mod_freq_B_MIDI) / host_sample_rate;
+                ring_mod_angle_B[i] += (cached_ring_mod_freq_B * cached_ring_mod_freq_B_MIDI * midi_pitch_wheel_ringB) / host_sample_rate;
             }
             else {
                 ring_mod_angle_B[i] += cached_ring_mod_freq_B / host_sample_rate;
@@ -959,8 +1133,11 @@ void ChaoticGoodAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
             }
             float sample = channel[j];
             sample = sample * (1 - cached_noise_level) + cached_noise_level * apply_noise(sample, i);
-            channel[j] = process(sample, i);
+            channel[j] = clamp(process(sample, i), -1, 1);
         }
+        // Fix for occasional descynchronization issues
+        delay_line_write_idx[1] = delay_line_write_idx[0];
+        delay_line_read_idx[1] = delay_line_read_idx[0];
     }
     juce::MidiMessage m;
     juce::MidiBuffer::Iterator it{ midiMessages };
@@ -968,7 +1145,9 @@ void ChaoticGoodAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
 
     while (it.getNextEvent(m, sample))
     {
-        if (m.isNoteOn()) {
+        if (m.isPitchWheel()) {
+            recalculate_pitch_bends_from_MIDI(m);
+        } else if (m.isNoteOn()) {
             recalculate_pitches_from_MIDI(m);
         }
         else if (m.isNoteOff()) {
@@ -1002,9 +1181,14 @@ void ChaoticGoodAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
                     }
                 }
             }
-            if (cached_midi_channel_comb == 0 || c == cached_midi_channel_comb) {
-                if (m.getNoteNumber() == midi_note_number_comb) {
-                    midi_note_is_playing_comb = false;
+            if (cached_midi_channel_comb_A == 0 || c == cached_midi_channel_comb_A) {
+                if (m.getNoteNumber() == midi_note_number_comb_A) {
+                    midi_note_is_playing_comb_A = false;
+                }
+            }
+            if (cached_midi_channel_comb_B == 0 || c == cached_midi_channel_comb_B) {
+                if (m.getNoteNumber() == midi_note_number_comb_B) {
+                    midi_note_is_playing_comb_B = false;
                 }
             }
         }
@@ -1059,13 +1243,13 @@ juce::String ChaoticGoodAudioProcessor::get_rm_wave_type(int which)
     int wave = which == 0 ? cached_ring_mod_waveA : cached_ring_mod_waveB;
     switch (wave){
     case waves::WAVE_SINE:
-        return juce::String("SINE");
+        return juce::String("SIN");
     case waves::WAVE_TRIANGLE:
-        return juce::String("TRIANGLE");
+        return juce::String("TRI");
     case waves::WAVE_SQUARE:
-        return juce::String("SQUARE");
+        return juce::String("SQU");
     case waves::WAVE_RAMP:
-        return juce::String("RAMP");
+        return juce::String("SAW");
     }
     return juce::String("ERROR");
 }

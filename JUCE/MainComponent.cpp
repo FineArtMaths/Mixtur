@@ -49,7 +49,7 @@ public:
         makeSlider(typeSlider, typeSliderLabel, "amplifier_structure", typeSliderAttachment, false, true, true);
 
         makeSlider(powerSlider, powerSliderLabel, "power_positive", powerSliderAttachment, false, true, true);
-        makeSlider(dryBlendSlider, dryBlendSliderLabel, "dry_blend", dryBlendSliderAttachment, false, true, true);
+        makeSlider(dryBlendSlider, dryBlendSliderLabel, "amp_blend", dryBlendSliderAttachment, false, true, true);
         makeSlider(lowCutoffSlider, lowCutoffSliderLabel, "low_cutoff", lowCutoffSliderAttachment, false, true, true);
         makeSlider(midCutoffSlider, midCutoffSliderLabel, "mid_cutoff", midCutoffSliderAttachment, false, true, true);
         makeSlider(highCutoffSlider, highCutoffSliderLabel, "high_cutoff", highCutoffSliderAttachment, false, true, true);
@@ -61,17 +61,18 @@ public:
 
         makeSlider(rmAmountSlider, rmAmountSliderLabel, "ring_mod_amt", rmAmountSliderAttachment, false, true, true);
         makeSlider(rmFMAmountSlider, rmFMAmountSliderLabel, "ring_mod_fm_amt", rmFMAmountSliderAttachment, false, true, true);
+        makeSlider(rmXFadeSlider, rmXFadeSliderLabel, "ring_mod_xfade", rmXFadeSliderAttachment, true, true, true);
 
         rmWaveA.setButtonText(audioProcessor->get_rm_wave_type(0));
         rmWaveA.onClick = [this] { rmWaveAClicked(); };
-        rmWaveA.setSize(50, 20);
+        rmWaveA.setSize(35, 20);
         rmWaveA.setColour(juce::Label::textColourId, juce::Colours::lightcoral);
         rmWaveA.setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
         addAndMakeVisible(rmWaveA);
 
         rmWaveB.setButtonText(audioProcessor->get_rm_wave_type(1));
         rmWaveB.onClick = [this] { rmWaveBClicked(); };
-        rmWaveB.setSize(50, 20);
+        rmWaveB.setSize(35, 20);
         rmWaveB.setColour(juce::Label::textColourId, juce::Colours::lightcoral);
         rmWaveB.setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
         addAndMakeVisible(rmWaveB);
@@ -84,15 +85,20 @@ public:
         addAndMakeVisible(combModModeButton);
 
         makeSlider(rmModeSlider, rmModeSliderLabel, "ring_mod_mode", rmModeSliderAttachment, false, true, true);
+        rmModeSlider.onValueChange = [this] { resized(); };
 //        makeSlider(flangerLFORateSlider, flangerLFORateSliderLabel, "noise_cutoff_feedback_amount", flangerLFORateSliderAttachment, false, true, true);
         makeSlider(flangerLFODepthSlider, flangerLFODepthSliderLabel, "flanger_lfo_depth", flangerLFODepthSliderAttachment, false, true, true);
 
         makeSlider(flangerAmountSlider, flangerAmountSliderLabel, "flanger_amount", flangerAmountSliderAttachment, false, true, true);
-        makeSlider(flangerCentreSlider, flangerCentreSliderLabel, "flanger_centre_position", flangerCentreSliderAttachment, false, true, true);
-        makeSlider(MIDI_flangerCentreSlider, MIDI_flangerCentreSliderLabel, "flanger_centre_position_MIDI", MIDI_flangerCentreSliderAttachment, true, true, true);
+        makeSlider(flangerCentreSliderA, flangerCentreSliderALabel, "flanger_centre_position_A", flangerCentreSliderAAttachment, false, true, true);
+        makeSlider(MIDI_flangerCentreSliderA, MIDI_flangerCentreSliderALabel, "flanger_centre_position_MIDI_A", MIDI_flangerCentreSliderAAttachment, true, true, true);
+        makeSlider(flangerCentreSliderB, flangerCentreSliderBLabel, "flanger_centre_position_B", flangerCentreSliderBAttachment, false, true, true);
+        makeSlider(MIDI_flangerCentreSliderB, MIDI_flangerCentreSliderBLabel, "flanger_centre_position_MIDI_B", MIDI_flangerCentreSliderBAttachment, true, true, true);
         makeSlider(flangerResonanceSlider, flangerResonanceSliderLabel, "flanger_resonance", flangerResonanceSliderAttachment, false, true, true);
         makeSlider(flangerAMSlider, flangerAMSliderLabel, "flanger_AM", flangerAMSliderAttachment, false, true, true);
-        
+        makeSlider(flangerModeSlider, flangerModeSliderLabel, "comb_mode", flangerModeSliderAttachment, false, true, true);
+        flangerModeSlider.onValueChange = [this] { resized(); };
+
         makeSlider(noiseDensitySlider, noiseDensitySliderLabel, "noise_density", noiseDensitySliderAttachment, false, true, true);
         makeSlider(noiseDensityVarSlider, noiseDensityVarSliderLabel, "noise_density_variation", noiseDensityVarSliderAttachment, false, true, true);
         makeSlider(noiseLevelSlider, noiseLevelSliderLabel, "noise_level", noiseLevelSliderAttachment, false, true, true);
@@ -119,19 +125,30 @@ public:
         lookAndFeel.setColour(juce::TextButton::ColourIds::buttonOnColourId, juce::Colours::lightcoral);
 
         noiseMidiButton.onClick = [this] { resized(); };
-        makeButton(noiseMidiButton, "Midi", "receive_midi_noise", noiseMidiButtonAttachment);
+        noiseMidiButton.setSize(35, 20);
+        makeButton(noiseMidiButton, "MIDI", "receive_midi_noise", noiseMidiButtonAttachment);
         ringAMidiButton.onClick = [this] { resized(); };
-        makeButton(ringAMidiButton, "Midi", "receive_midi_ringA", ringAMidiButtonAttachment);
+        ringAMidiButton.setSize(35, 20);
+        makeButton(ringAMidiButton, "MIDI", "receive_midi_ringA", ringAMidiButtonAttachment);
         ringBMidiButton.onClick = [this] { resized(); };
-        makeButton(ringBMidiButton, "Midi", "receive_midi_ringB", ringBMidiButtonAttachment);
-        combMidiButton.onClick = [this] { resized(); };
-        makeButton(combMidiButton, "Midi", "receive_midi_comb", combMidiButtonAttachment);
+        ringBMidiButton.setSize(35, 20);
+        makeButton(ringBMidiButton, "MIDI", "receive_midi_ringB", ringBMidiButtonAttachment);
+        combAMidiButton.onClick = [this] { resized(); };
+        combAMidiButton.setSize(35, 20);
+        makeButton(combAMidiButton, "MIDI", "receive_midi_comb_A", combAMidiButtonAttachment);
+        combBMidiButton.onClick = [this] { resized(); };
+        combBMidiButton.setSize(35, 20);
+        makeButton(combBMidiButton, "MIDI", "receive_midi_comb_B", combBMidiButtonAttachment);
 
         makeButton(rmALFOButton, "LFO", "ring_mod_low_A", rmALFOButtonAttachment);
+        rmALFOButton.setSize(35, 20);
         makeButton(rmBLFOButton, "LFO", "ring_mod_low_B", rmBLFOButtonAttachment);
+        rmBLFOButton.setSize(35, 20);
 
         makeButton(jitterLFOButton, "LFO", "jitter_low", jitterLFOButtonAttachment);
+        jitterLFOButton.setSize(35, 20);
         makeButton(filterInputButton, "IN", "filter_input", filterInputButtonAttachment);
+        filterInputButton.setSize(35, 20);
     }
 
     void makeButton(
@@ -254,9 +271,6 @@ public:
         xpos = left_margin + col_spacer;
         ypos = top_margin;
 
-        noiseMidiButton.setTopLeftPosition(xpos + 200, 30);
-        noiseMidiButton.setSize(50, 25);
-
         placeSlider(noiseLevelSlider, noiseLevelSliderLabel, xpos, ypos);
         ypos += line_spacer;
         placeSlider(noiseDensitySlider, noiseDensitySliderLabel, xpos, ypos);
@@ -275,6 +289,7 @@ public:
             noiseFilterCutoffSlider.setVisible(true);
             placeSlider(noiseFilterCutoffSlider, noiseFilterCutoffSliderLabel, xpos, ypos);
         }
+        noiseMidiButton.setTopLeftPosition(xpos + 80, ypos + 60);
         ypos += line_spacer;
         placeSlider(noiseFilterResonanceSlider, noiseFilterResonanceSliderLabel, xpos, ypos);
         ypos += line_spacer;
@@ -287,11 +302,6 @@ public:
         xpos = left_margin + col_spacer * 2;
         ypos = top_margin;
 
-        ringAMidiButton.setTopLeftPosition(xpos + 200, 20);
-        ringAMidiButton.setSize(50, 25);
-        ringBMidiButton.setTopLeftPosition(xpos + 200, 45);
-        ringBMidiButton.setSize(50, 25);
-
         if (audioProcessor->cached_midi_ringA) {
             rmFreqASlider.setVisible(false);
             MIDI_rmFreqASlider.setVisible(true);
@@ -302,10 +312,10 @@ public:
             rmFreqASlider.setVisible(true);
             placeSlider(rmFreqASlider, rmFreqASliderLabel, xpos, ypos);
         }
-        rmALFOButton.setTopLeftPosition(xpos + 80, ypos);
-        rmALFOButton.setSize(35, 25);
-        rmWaveA.setTopLeftPosition(xpos + 80, ypos + 40);
+        rmWaveA.setTopLeftPosition(xpos + 80, ypos);
         rmWaveA.toFront(false);
+        rmALFOButton.setTopLeftPosition(xpos + 85, ypos + 30);
+        ringAMidiButton.setTopLeftPosition(xpos + 80, ypos + 60);
 
         ypos += line_spacer;
         placeSlider(rmAmountSlider, rmAmountSliderLabel, xpos, ypos);
@@ -314,25 +324,54 @@ public:
         
         ypos = top_margin;
         xpos += knob_size + knob_spacer;
-        if (audioProcessor->cached_midi_ringB) {
+        if (audioProcessor->cached_ring_mod_mode == RM_MODE_SINGLE) {
             rmFreqBSlider.setVisible(false);
-            MIDI_rmFreqBSlider.setVisible(true);
-            placeSlider(MIDI_rmFreqBSlider, MIDI_rmFreqBSliderLabel, xpos, ypos);
-        }
-        else {
             MIDI_rmFreqBSlider.setVisible(false);
-            rmFreqBSlider.setVisible(true);
-            placeSlider(rmFreqBSlider, rmFreqBSliderLabel, xpos, ypos);
+            rmBLFOButton.setVisible(false);
+            rmWaveB.setVisible(false);
+            ringBMidiButton.setVisible(false);
+        } else {
+            if (audioProcessor->cached_midi_ringB) {
+                rmFreqBSlider.setVisible(false);
+                MIDI_rmFreqBSlider.setVisible(true);
+                placeSlider(MIDI_rmFreqBSlider, MIDI_rmFreqBSliderLabel, xpos, ypos);
+            }
+            else {
+                MIDI_rmFreqBSlider.setVisible(false);
+                rmFreqBSlider.setVisible(true);
+                placeSlider(rmFreqBSlider, rmFreqBSliderLabel, xpos, ypos);
+            }
+            rmWaveB.setTopLeftPosition(xpos + 80, ypos);
+            rmWaveB.toFront(false);
+            rmBLFOButton.setTopLeftPosition(xpos + 85, ypos + 30);
+            ringBMidiButton.setTopLeftPosition(xpos + 80, ypos + 60);
+            rmBLFOButton.setVisible(true);
+            rmWaveB.setVisible(true);
+            ringBMidiButton.setVisible(true);
         }
-        rmBLFOButton.setTopLeftPosition(xpos + 80, ypos);
-        rmBLFOButton.setSize(40, 25);
-        rmWaveB.setTopLeftPosition(xpos + 80, ypos + 40);
-        rmWaveB.toFront(false);
 
         ypos += line_spacer;
         //        placeSlider(rmWaveSlider, rmWaveSliderLabel, xpos, ypos);
         ypos += line_spacer;
-        placeSlider(rmFMAmountSlider, rmFMAmountSliderLabel, xpos, ypos);
+        switch (audioProcessor->cached_ring_mod_mode) {
+        case RM_MODE_SINGLE:
+            rmFMAmountSlider.setVisible(false);
+            rmXFadeSlider.setVisible(false);
+            break;
+        case RM_MODE_SERIES:
+            rmFMAmountSlider.setVisible(false);
+            rmXFadeSlider.setVisible(false);
+            break;
+        case RM_MODE_PARALLEL:
+            rmFMAmountSlider.setVisible(false);
+            rmXFadeSlider.setVisible(true);
+            placeSlider(rmXFadeSlider, rmFMAmountSliderLabel, xpos, ypos);
+            break;
+        default:
+            rmXFadeSlider.setVisible(false);
+            rmFMAmountSlider.setVisible(true);
+            placeSlider(rmFMAmountSlider, rmFMAmountSliderLabel, xpos, ypos);
+        }
 
 
         // Comb Filter
@@ -340,29 +379,48 @@ public:
         xpos = left_margin + col_spacer * 3;
         ypos = top_margin;
 
-//        flangerSectionLabel.setTopLeftPosition(xpos, 15);
-//        flangerSectionLabel.setSize(230, 55);
-        combMidiButton.setTopLeftPosition(xpos + 195, 30);
-        combMidiButton.setSize(50, 25);
-
-        if (audioProcessor->cached_midi_comb) {
-            flangerCentreSlider.setVisible(false);
-            MIDI_flangerCentreSlider.setVisible(true);
-            placeSlider(MIDI_flangerCentreSlider, MIDI_flangerCentreSliderLabel, xpos, ypos);
+        if (audioProcessor->cached_midi_comb_A) {
+            flangerCentreSliderA.setVisible(false);
+            MIDI_flangerCentreSliderA.setVisible(true);
+            placeSlider(MIDI_flangerCentreSliderA, MIDI_flangerCentreSliderALabel, xpos, ypos);
         }
         else {
-            MIDI_flangerCentreSlider.setVisible(false);
-            flangerCentreSlider.setVisible(true);
-            placeSlider(flangerCentreSlider, flangerCentreSliderLabel, xpos, ypos);
+            MIDI_flangerCentreSliderA.setVisible(false);
+            flangerCentreSliderA.setVisible(true);
+            placeSlider(flangerCentreSliderA, flangerCentreSliderALabel, xpos, ypos);
         }
+        combAMidiButton.setTopLeftPosition(xpos + 80, ypos + 60);
         ypos += line_spacer;
         placeSlider(flangerAmountSlider, flangerAmountSliderLabel, xpos, ypos);
         ypos += line_spacer;
-        placeSlider(flangerLFORateSlider, flangerLFORateSliderLabel, xpos, ypos);
+        placeSlider(flangerModeSlider, flangerModeSliderLabel, xpos, ypos);
 
         ypos = top_margin;
         xpos += knob_size + knob_spacer;
+
+        if (audioProcessor->cached_comb_mode == COMB_MODE_SINGLE) {
+            flangerCentreSliderB.setVisible(false);
+            MIDI_flangerCentreSliderB.setVisible(false);
+            combBMidiButton.setVisible(false);
+        }
+        else {
+            if (audioProcessor->cached_midi_comb_B) {
+                flangerCentreSliderB.setVisible(false);
+                MIDI_flangerCentreSliderB.setVisible(true);
+                placeSlider(MIDI_flangerCentreSliderB, MIDI_flangerCentreSliderBLabel, xpos, ypos);
+            }
+            else {
+                MIDI_flangerCentreSliderB.setVisible(false);
+                flangerCentreSliderB.setVisible(true);
+                placeSlider(flangerCentreSliderB, flangerCentreSliderBLabel, xpos, ypos);
+            }
+            combBMidiButton.setTopLeftPosition(xpos + 80, ypos + 60);
+            combBMidiButton.setVisible(true);
+        }
+        ypos += line_spacer;
         placeSlider(flangerResonanceSlider, flangerResonanceSliderLabel, xpos, ypos);
+        //        placeSlider(flangerLFORateSlider, flangerLFORateSliderLabel, xpos, ypos);
+
         ypos += line_spacer;
         placeSlider(flangerAMSlider, flangerAMSliderLabel, xpos, ypos);
         combModModeButton.setTopLeftPosition(xpos + 80, ypos);
@@ -537,7 +595,11 @@ private:
     juce::Label rmFMAmountSliderLabel;
     std::unique_ptr<SliderAttachment> rmFMAmountSliderAttachment;
 
-  //  juce::Slider rmWaveSlider;
+    juce::Slider rmXFadeSlider;
+    juce::Label rmXFadeSliderLabel;
+    std::unique_ptr<SliderAttachment> rmXFadeSliderAttachment;
+
+    //  juce::Slider rmWaveSlider;
   //  juce::Label rmWaveSliderLabel;
   //  std::unique_ptr<SliderAttachment> rmWaveSliderAttachment;
 
@@ -550,13 +612,25 @@ private:
     juce::Label rmModeSliderLabel;
     std::unique_ptr<SliderAttachment> rmModeSliderAttachment;
 
-    juce::Slider flangerCentreSlider;
-    juce::Label flangerCentreSliderLabel;
-    std::unique_ptr<SliderAttachment> flangerCentreSliderAttachment;
+    juce::Slider flangerCentreSliderA;
+    juce::Label flangerCentreSliderALabel;
+    std::unique_ptr<SliderAttachment> flangerCentreSliderAAttachment;
 
-    juce::Slider MIDI_flangerCentreSlider;
-    juce::Label MIDI_flangerCentreSliderLabel;
-    std::unique_ptr<SliderAttachment> MIDI_flangerCentreSliderAttachment;
+    juce::Slider flangerCentreSliderB;
+    juce::Label flangerCentreSliderBLabel;
+    std::unique_ptr<SliderAttachment> flangerCentreSliderBAttachment;
+
+    juce::Slider MIDI_flangerCentreSliderA;
+    juce::Label MIDI_flangerCentreSliderALabel;
+    std::unique_ptr<SliderAttachment> MIDI_flangerCentreSliderAAttachment;
+
+    juce::Slider MIDI_flangerCentreSliderB;
+    juce::Label MIDI_flangerCentreSliderBLabel;
+    std::unique_ptr<SliderAttachment> MIDI_flangerCentreSliderBAttachment;
+
+    juce::Slider flangerModeSlider;
+    juce::Label flangerModeSliderLabel;
+    std::unique_ptr<SliderAttachment> flangerModeSliderAttachment;
 
     juce::Slider flangerLFORateSlider;
     juce::Label flangerLFORateSliderLabel;
@@ -610,8 +684,10 @@ private:
     std::unique_ptr<ButtonAttachment> ringAMidiButtonAttachment;
     juce::TextButton ringBMidiButton;
     std::unique_ptr<ButtonAttachment> ringBMidiButtonAttachment;
-    juce::TextButton combMidiButton;
-    std::unique_ptr<ButtonAttachment> combMidiButtonAttachment;
+    juce::TextButton combAMidiButton;
+    std::unique_ptr<ButtonAttachment> combAMidiButtonAttachment;
+    juce::TextButton combBMidiButton;
+    std::unique_ptr<ButtonAttachment> combBMidiButtonAttachment;
 
     juce::TextButton rmALFOButton;
     std::unique_ptr<ButtonAttachment> rmALFOButtonAttachment;
